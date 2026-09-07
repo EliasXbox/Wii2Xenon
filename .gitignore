@@ -1,0 +1,29 @@
+# Visual Studio / IntelliSense
+*.sdf
+*.opensdf
+*.suo
+*.user
+ipch/
+.vs/
+
+# Build directories
+Debug/
+Release/
+Profile/
+Release_LTCG/
+
+# Compiler / linker intermediates
+*.obj
+*.idb
+*.pdb
+*.tlog
+*.log
+
+# Xbox 360 build outputs
+*.exe
+*.xex
+*.xdb
+
+# OS / editor clutter
+Thumbs.db
+.DS_Store
