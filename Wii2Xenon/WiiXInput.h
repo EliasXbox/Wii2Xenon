@@ -24,6 +24,10 @@ typedef signed int         s32;
 #define PAD_CHAN3       3
 #define PAD_CHANMAX     4
 
+#define PAD_MOTOR_STOP          0
+#define PAD_MOTOR_RUMBLE        1
+#define PAD_MOTOR_STOP_HARD     2
+
 #define PAD_BUTTON_LEFT     0x0001
 #define PAD_BUTTON_RIGHT    0x0002
 #define PAD_BUTTON_DOWN     0x0004
@@ -84,6 +88,7 @@ s8 PAD_SubStickX(int pad);
 s8 PAD_SubStickY(int pad);
 u8 PAD_TriggerL(int pad);
 u8 PAD_TriggerR(int pad);
+void PAD_ControlMotor(s32 chan, u32 cmd);
 
 // ------------------------------------------------------------
 // WPAD API
@@ -95,3 +100,4 @@ s32 WPAD_ScanPads(void);
 u32 WPAD_ButtonsUp(int chan);
 u32 WPAD_ButtonsDown(int chan);
 u32 WPAD_ButtonsHeld(int chan);
+s32 WPAD_Rumble(s32 chan, int status);
