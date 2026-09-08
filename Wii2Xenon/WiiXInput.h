@@ -14,7 +14,6 @@ typedef signed short       s16;
 typedef unsigned int       u32;
 typedef signed int         s32;
 
-
 // ------------------------------------------------------------
 // PAD - GameCube Controller compatibility
 // ------------------------------------------------------------
@@ -40,7 +39,6 @@ typedef signed int         s32;
 #define PAD_BUTTON_Y        0x0800
 #define PAD_BUTTON_MENU     0x1000
 #define PAD_BUTTON_START    0x1000
-
 
 // ------------------------------------------------------------
 // WPAD - Wii Remote compatibility
@@ -69,7 +67,6 @@ enum
 
 #define WPAD_BUTTON_PLUS    0x1000
 
-
 // ------------------------------------------------------------
 // PAD API
 // ------------------------------------------------------------
@@ -83,7 +80,10 @@ u16 PAD_ButtonsHeld(int pad);
 
 s8 PAD_StickX(int pad);
 s8 PAD_StickY(int pad);
-
+s8 PAD_SubStickX(int pad);
+s8 PAD_SubStickY(int pad);
+u8 PAD_TriggerL(int pad);
+u8 PAD_TriggerR(int pad);
 
 // ------------------------------------------------------------
 // WPAD API
