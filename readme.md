@@ -2,58 +2,64 @@
 
 Wii2Xenon is an experimental compatibility/porting layer for bringing Wii software concepts and APIs to the Xbox 360.
 
-The project is currently focused on building the runtime incrementally instead of attempting a full game port all at once.
+## Branch
 
-## Current status
+**`feature/wiixinput-rumble` — M0.2.3 Wii/GameCube rumble compatibility**
 
-- M0.0 — Minimal Xbox 360 XEX builds and boots: ✅
-- M0.1 — Direct3D framebuffer clear + Present: ✅
-- M0.2 — Basic WiiXInput (`WPAD_*` -> XInput): ✅
-- Next — expand WiiXInput (`PAD_*`, analog input, rumble) and begin GX360 graphics compatibility
+This branch adds vibration output to WiiXInput so Wii/GameCube-style rumble calls can drive an Xbox 360 controller through XInput.
 
-## Current architecture
+It is stacked on top of the tested analog-input branch.
+
+## What this branch adds
+
+- `PAD_MOTOR_STOP`
+- `PAD_MOTOR_RUMBLE`
+- `PAD_MOTOR_STOP_HARD`
+- `PAD_ControlMotor()` -> Xbox 360 `XInputSetState()` vibration
+- `WPAD_Rumble()` -> same vibration backend
+- simple hold/release test for motor start and stop
+
+## Test result
+
+**Status: ✅ tested successfully**
+
+The test was run with an original Xbox 360 controller. Holding the mapped PAD A button enabled vibration and releasing it stopped vibration correctly.
 
 ```text
-Wii-style application code
+Wii / GameCube API
         |
-        +--> WiiXInput --> XInput
+ PAD_ControlMotor()
+    WPAD_Rumble()
         |
-        +--> GX360 ------> Direct3D 9 / Xenos
+    WiiXInput
         |
-        +--> Runtime ----> Xbox 360 APIs
+  XInputSetState()
+        |
+Xbox 360 controller vibration
+```
+
+The M0.2.2 analog test remains available in this branch as a regression check.
+
+## Current WiiXInput milestone
+
+```text
+Digital buttons       ✅
+Analog left stick     ✅
+Analog right stick    ✅
+Analog triggers       ✅
+PAD rumble            ✅
+WPAD rumble backend   ✅
 ```
 
 ## Development setup
 
-### Xbox 360 side
+- Visual Studio 2010 + Xbox 360 XDK
+- Xenia and/or Xbox 360 hardware
+- libogc used as the Wii/GameCube API reference
 
-- Visual Studio 2010
-- Xbox 360 XDK
-- Xenia and/or Xbox 360 hardware for testing
+## Next direction
 
-### Wii reference side
-
-- devkitPro
-- devkitPPC
-- libogc
-
-libogc is used as an API/reference target for compatibility work. Wii2Xenon is not intended to require the Wii toolchain when building the Xbox 360 target.
-
-## Repository layout
-
-```text
-Wii2Xenon/
-├── main.cpp
-├── WiiXInput.h
-├── WiiXInput.cpp
-└── Wii2Xenon.vcxproj
-```
-
-The layout will expand as GX360 and runtime modules are introduced.
-
-## Project state
-
-Early work in progress. APIs and structure may change frequently while compatibility layers are being implemented and tested.
+After WiiXInput, the next major milestone is **M0.3 — GX360**: extracting graphics code from `main.cpp` and beginning a Wii GX-style graphics compatibility layer over Xbox 360 Direct3D/Xenos.
 
 ## Legal note
 
