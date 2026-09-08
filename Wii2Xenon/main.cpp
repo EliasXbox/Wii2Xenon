@@ -4,15 +4,32 @@
 #include "WiiXInput.h"
 
 // ============================================================
-// Wii2Xenon - M0.3.2
-// GX_QUADS + GX_TRIANGLESTRIP regression test
+// Wii2Xenon - M0.4.0
+// First GX-style textured quad
 // ============================================================
+
+static const GXU16 TEST_TEXTURE_SIZE = 64;
+static DWORD g_CheckerTexture[TEST_TEXTURE_SIZE * TEST_TEXTURE_SIZE];
+
+static void BuildCheckerTexture(void)
+{
+    for (GXU16 y = 0; y < TEST_TEXTURE_SIZE; ++y)
+    {
+        for (GXU16 x = 0; x < TEST_TEXTURE_SIZE; ++x)
+        {
+            const bool alternate = (((x / 8) + (y / 8)) & 1) != 0;
+            const DWORD colorA = D3DCOLOR_ARGB(255, 255, 255, 255);
+            const DWORD colorB = D3DCOLOR_ARGB(255, 55, 120, 255);
+            g_CheckerTexture[(y * TEST_TEXTURE_SIZE) + x] = alternate ? colorA : colorB;
+        }
+    }
+}
 
 VOID __cdecl main()
 {
     OutputDebugStringA("============================================\n");
-    OutputDebugStringA(" Wii2Xenon Runtime - M0.3.2\n");
-    OutputDebugStringA(" GX_QUADS + GX_TRIANGLESTRIP Test\n");
+    OutputDebugStringA(" Wii2Xenon Runtime - M0.4.0\n");
+    OutputDebugStringA(" First GX-style Textured Quad\n");
     OutputDebugStringA("============================================\n");
 
     if (!GX360_Init())
@@ -25,7 +42,16 @@ VOID __cdecl main()
     PAD_Init();
     bool rumbleEnabled = false;
 
-    OutputDebugStringA("[Wii2Xenon] Left: GX_QUADS. Right: GX_TRIANGLESTRIP.\n");
+    BuildCheckerTexture();
+
+    GXTexObj checker;
+    ZeroMemory(&checker, sizeof(checker));
+    GX_InitTexObj(&checker, g_CheckerTexture,
+        TEST_TEXTURE_SIZE, TEST_TEXTURE_SIZE,
+        GX_TF_RGBA8, GX_REPEAT, GX_REPEAT, 0);
+    GX_LoadTexObj(&checker, GX_TEXMAP0);
+
+    OutputDebugStringA("[Wii2Xenon] Rendering checker texture through GX_TexCoord2f32.\n");
     OutputDebugStringA("[Wii2Xenon] Hold A for rumble regression test.\n");
 
     for (;;)
@@ -43,22 +69,25 @@ VOID __cdecl main()
 
         GX360_Clear(D3DCOLOR_XRGB(24, 28, 40));
 
-        // Left: one GX quad. GX360 translates it into two Xenos triangles.
         GX_Begin(GX_QUADS, 0, 4);
-        GX_Position3f32(-0.85f, -0.45f, 0.0f); GX_Color4u8(255, 70, 70, 255);
-        GX_Position3f32(-0.15f, -0.45f, 0.0f); GX_Color4u8(255, 220, 70, 255);
-        GX_Position3f32(-0.15f,  0.45f, 0.0f); GX_Color4u8(70, 255, 120, 255);
-        GX_Position3f32(-0.85f,  0.45f, 0.0f); GX_Color4u8(70, 150, 255, 255);
-        GX_End();
 
-        // Right: four vertices form two triangles through a triangle strip.
-        GX_Begin(GX_TRIANGLESTRIP, 0, 4);
-        GX_Position3f32(0.15f, -0.45f, 0.0f); GX_Color4u8(255, 90, 170, 255);
-        GX_Position3f32(0.15f,  0.45f, 0.0f); GX_Color4u8(100, 130, 255, 255);
-        GX_Position3f32(0.85f, -0.45f, 0.0f); GX_Color4u8(90, 255, 180, 255);
-        GX_Position3f32(0.85f,  0.45f, 0.0f); GX_Color4u8(255, 220, 90, 255);
-        GX_End();
+        GX_Position3f32(-0.70f, -0.70f, 0.0f);
+        GX_Color4u8(255, 255, 255, 255);
+        GX_TexCoord2f32(0.0f, 2.0f);
 
+        GX_Position3f32(0.70f, -0.70f, 0.0f);
+        GX_Color4u8(255, 255, 255, 255);
+        GX_TexCoord2f32(2.0f, 2.0f);
+
+        GX_Position3f32(0.70f, 0.70f, 0.0f);
+        GX_Color4u8(255, 255, 255, 255);
+        GX_TexCoord2f32(2.0f, 0.0f);
+
+        GX_Position3f32(-0.70f, 0.70f, 0.0f);
+        GX_Color4u8(255, 255, 255, 255);
+        GX_TexCoord2f32(0.0f, 0.0f);
+
+        GX_End();
         GX360_Present();
     }
 }
