@@ -2,16 +2,22 @@
 
 Wii2Xenon is an experimental compatibility/porting layer for bringing Wii software concepts and APIs to the Xbox 360.
 
-The project is currently focused on building the runtime incrementally instead of attempting a full game port all at once.
+## Branch
 
-## Current status
+**`cleanup/repo-baseline` — repository cleanup baseline**
 
-- M0.0 — Minimal Xbox 360 XEX builds and boots: ✅
-- M0.1 — Direct3D framebuffer clear + Present: ✅
-- M0.2 — Basic WiiXInput (`WPAD_*` -> XInput): ✅
-- Next — expand WiiXInput (`PAD_*`, analog input, rumble) and begin GX360 graphics compatibility
+This branch is focused on repository hygiene and project presentation rather than runtime features.
 
-## Current architecture
+Its purpose is to keep the source tree easier to clone, review, and maintain by removing generated Visual Studio files from version control, adding ignore rules, and improving the project documentation.
+
+## What this branch contains
+
+- `.gitignore` rules for Visual Studio/Xbox 360 build artifacts
+- removal of generated IntelliSense/user-specific files from version control
+- expanded project README and legal note
+- no intended runtime behavior changes
+
+## Project architecture
 
 ```text
 Wii-style application code
@@ -37,23 +43,11 @@ Wii-style application code
 - devkitPPC
 - libogc
 
-libogc is used as an API/reference target for compatibility work. Wii2Xenon is not intended to require the Wii toolchain when building the Xbox 360 target.
-
-## Repository layout
-
-```text
-Wii2Xenon/
-├── main.cpp
-├── WiiXInput.h
-├── WiiXInput.cpp
-└── Wii2Xenon.vcxproj
-```
-
-The layout will expand as GX360 and runtime modules are introduced.
+libogc is used as an API/reference target for compatibility work.
 
 ## Project state
 
-Early work in progress. APIs and structure may change frequently while compatibility layers are being implemented and tested.
+This branch should stay low-risk: cleanup/documentation only. Runtime feature work belongs in dedicated feature branches.
 
 ## Legal note
 
