@@ -4,15 +4,15 @@
 #include "WiiXInput.h"
 
 // ============================================================
-// Wii2Xenon - M0.3.1
-// First GX-style primitive test
+// Wii2Xenon - M0.3.2
+// GX_QUADS + GX_TRIANGLESTRIP regression test
 // ============================================================
 
 VOID __cdecl main()
 {
     OutputDebugStringA("============================================\n");
-    OutputDebugStringA(" Wii2Xenon Runtime - M0.3.1\n");
-    OutputDebugStringA(" First GX-style Primitive Test\n");
+    OutputDebugStringA(" Wii2Xenon Runtime - M0.3.2\n");
+    OutputDebugStringA(" GX_QUADS + GX_TRIANGLESTRIP Test\n");
     OutputDebugStringA("============================================\n");
 
     if (!GX360_Init())
@@ -25,8 +25,8 @@ VOID __cdecl main()
     PAD_Init();
     bool rumbleEnabled = false;
 
-    OutputDebugStringA("[Wii2Xenon] Rendering GX_TRIANGLES through GX360.\n");
-    OutputDebugStringA("[Wii2Xenon] Hold A to keep the WiiXInput rumble regression test active.\n");
+    OutputDebugStringA("[Wii2Xenon] Left: GX_QUADS. Right: GX_TRIANGLESTRIP.\n");
+    OutputDebugStringA("[Wii2Xenon] Hold A for rumble regression test.\n");
 
     for (;;)
     {
@@ -43,18 +43,22 @@ VOID __cdecl main()
 
         GX360_Clear(D3DCOLOR_XRGB(24, 28, 40));
 
-        GX_Begin(GX_TRIANGLES, 0, 3);
-
-        GX_Position3f32(-0.65f, -0.55f, 0.0f);
-        GX_Color4u8(255, 64, 64, 255);
-
-        GX_Position3f32(0.65f, -0.55f, 0.0f);
-        GX_Color4u8(64, 255, 96, 255);
-
-        GX_Position3f32(0.0f, 0.65f, 0.0f);
-        GX_Color4u8(72, 128, 255, 255);
-
+        // Left: one GX quad. GX360 translates it into two Xenos triangles.
+        GX_Begin(GX_QUADS, 0, 4);
+        GX_Position3f32(-0.85f, -0.45f, 0.0f); GX_Color4u8(255, 70, 70, 255);
+        GX_Position3f32(-0.15f, -0.45f, 0.0f); GX_Color4u8(255, 220, 70, 255);
+        GX_Position3f32(-0.15f,  0.45f, 0.0f); GX_Color4u8(70, 255, 120, 255);
+        GX_Position3f32(-0.85f,  0.45f, 0.0f); GX_Color4u8(70, 150, 255, 255);
         GX_End();
+
+        // Right: four vertices form two triangles through a triangle strip.
+        GX_Begin(GX_TRIANGLESTRIP, 0, 4);
+        GX_Position3f32(0.15f, -0.45f, 0.0f); GX_Color4u8(255, 90, 170, 255);
+        GX_Position3f32(0.15f,  0.45f, 0.0f); GX_Color4u8(100, 130, 255, 255);
+        GX_Position3f32(0.85f, -0.45f, 0.0f); GX_Color4u8(90, 255, 180, 255);
+        GX_Position3f32(0.85f,  0.45f, 0.0f); GX_Color4u8(255, 220, 90, 255);
+        GX_End();
+
         GX360_Present();
     }
 }
