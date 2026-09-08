@@ -1,76 +1,80 @@
 # Wii2Xenon (Wii360)
 
-Wii2Xenon is an experimental compatibility/porting layer for bringing Wii software concepts and APIs to the Xbox 360.
+Wii2Xenon is an experimental compatibility/porting layer for bringing Wii and GameCube software concepts and APIs to the Xbox 360.
 
 ## Branch
 
-**`feature/gx360-core` — M0.3.0 standalone graphics backend**
+**`feature/gx360-primitives` — M0.3.1 first GX-style primitive**
 
-This branch starts the GX360 milestone by moving the already-tested Xbox 360 Direct3D setup out of `main.cpp` and into a dedicated graphics module.
-
-It is stacked on top of the tested WiiXInput rumble branch so digital input, analog input, triggers, and rumble remain available as regression checks while graphics work begins.
+This branch is the first step from a generic Xbox 360 graphics backend toward an actual GX compatibility surface.
 
 ## What this branch adds
 
-- `GX360.h` public graphics-backend interface
-- `GX360.cpp` Direct3D/Xenos backend implementation
-- `GX360_Init()`
-- `GX360_Shutdown()`
-- `GX360_Clear()`
-- `GX360_Present()`
-- `GX360_GetDevice()` for later low-level GX compatibility work
-- a smaller `main.cpp` that consumes GX360 instead of owning Direct3D state
-- Visual Studio project entries for the new GX360 source/header files
+- minimal `GXCompat.h` interface
+- `GX_Begin()`
+- `GX_Position3f32()`
+- `GX_Color4u8()`
+- `GX_End()`
+- immediate vertex collection for `GX_TRIANGLES`
+- a small shader-based Direct3D pipeline created by GX360
+- a three-vertex RGB triangle regression test in `main.cpp`
+- WiiXInput rumble remains active as a regression check
 
 ```text
-Wii-style application code
-        |
-   future GX API
-        |
-      GX360
-        |
- Direct3D 9 / Xenos
-        |
-     Xbox 360
+Wii / GameCube-style GX calls
+          |
+      GXCompat
+          |
+       GX360
+          |
+ Direct3D 9+ / Xenos
+          |
+       Xbox 360
 ```
 
-## Test result
+## Test target
 
-**Status: ✅ validated on Xenia and real Xbox 360 hardware**
+**Status: 🧪 ready for VS2010 / Xenia / real Xbox 360 validation**
 
-The regression test behaved identically on the emulator and on real Xbox 360 hardware:
+Expected result:
 
-- analog sticks changed framebuffer colors correctly
-- LT/RT controlled the blue channel
-- holding X switched to the right stick
-- holding A enabled controller rumble
-- GX360 initialization, clear, and present remained stable after being moved out of `main.cpp`
+- dark background
+- one large triangle near the center of the screen
+- red-ish left vertex
+- green-ish right vertex
+- blue-ish top vertex
+- colors interpolate across the triangle
+- holding A still activates the controller rumble regression test
 
-This validates the M0.3.0 module split and gives the project a stable graphics backend to build the Wii-style compatibility layer on top of.
+If the project builds but the triangle is missing, check the debug output for `GX360` shader/pipeline messages.
 
 ## Current milestones
 
 ```text
-M0.0  XEX build / boot                    ✅
-M0.1  Direct3D Clear / Present            ✅
-M0.2  WiiXInput digital input             ✅
-M0.2.2 PAD analog / triggers              ✅
+M0.0   XEX build / boot                    ✅
+M0.1   Direct3D Clear / Present            ✅
+M0.2   WiiXInput digital input             ✅
+M0.2.2 PAD analog / triggers               ✅
 M0.2.3 PAD / WPAD rumble                  ✅
 M0.3.0 Standalone GX360 core              ✅ Xenia + Xbox 360
-M0.3.1 First GX-style primitive           next
+M0.3.1 First GX-style triangle            🧪
 ```
+
+## Why this also matters for GameCube
+
+The Wii GX API is descended from the GameCube graphics API, so a carefully designed GX360 layer can eventually serve both Wii and GameCube ports. The plan is to grow the compatibility surface from real client needs instead of trying to implement the entire GX/TEV feature set at once.
+
+A future GameCube client such as a legal, open-source decompilation can therefore reuse the same GX360 direction, while platform-specific OS/input/audio compatibility lives in separate layers.
 
 ## Development setup
 
 - Visual Studio 2010 + Xbox 360 XDK
 - Xenia and/or Xbox 360 hardware
-- libogc used as the Wii/GameCube API reference
+- libogc used as a Wii/GameCube API reference
 
 ## Next direction
 
-The next step is **M0.3.1 — first GX-style primitive**. The goal is to begin exposing a very small Wii-like graphics API (`GX_Begin`, position/color submission, `GX_End`) while GX360 translates that work to the Xbox 360 graphics backend.
-
-We will implement only the subset required by early test clients instead of trying to reproduce the whole Wii GX/TEV stack at once.
+After the first triangle is validated, add additional primitive modes and begin texture support required by the 240p Test Suite and later Wii/GameCube clients.
 
 ## Legal note
 
