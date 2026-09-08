@@ -2,8 +2,8 @@
 #include "WiiXInput.h"
 
 // ============================================================
-// Wii2Xenon - M0.2.2
-// GameCube PAD analog input test
+// Wii2Xenon - M0.2.3
+// GameCube PAD analog + rumble test
 // ============================================================
 
 IDirect3D9*       g_pD3D    = NULL;
@@ -75,8 +75,8 @@ static u8 AxisToColor(s8 value)
 VOID __cdecl main()
 {
     OutputDebugStringA("============================================\n");
-    OutputDebugStringA(" Wii2Xenon Runtime - M0.2.2\n");
-    OutputDebugStringA(" GameCube PAD Analog Test\n");
+    OutputDebugStringA(" Wii2Xenon Runtime - M0.2.3\n");
+    OutputDebugStringA(" GameCube PAD Analog + Rumble Test\n");
     OutputDebugStringA("============================================\n");
 
     if (!GX360_Init())
@@ -90,7 +90,10 @@ VOID __cdecl main()
 
     OutputDebugStringA("[Wii2Xenon] Left stick controls red/green.\n");
     OutputDebugStringA("[Wii2Xenon] LT/RT control blue.\n");
-    OutputDebugStringA("[Wii2Xenon] Hold X to test the right stick instead.\n");
+    OutputDebugStringA("[Wii2Xenon] Hold X to test the right stick.\n");
+    OutputDebugStringA("[Wii2Xenon] Hold A to test PAD rumble.\n");
+
+    bool rumbleEnabled = false;
 
     for (;;)
     {
@@ -102,11 +105,22 @@ VOID __cdecl main()
         s8 x = PAD_StickX(PAD_CHAN0);
         s8 y = PAD_StickY(PAD_CHAN0);
 
-        // Hold Xbox X / GameCube X to visualize the right stick.
         if (held & PAD_BUTTON_X)
         {
             x = PAD_SubStickX(PAD_CHAN0);
             y = PAD_SubStickY(PAD_CHAN0);
+        }
+
+        const bool wantsRumble = (held & PAD_BUTTON_A) != 0;
+
+        if (wantsRumble != rumbleEnabled)
+        {
+            PAD_ControlMotor(
+                PAD_CHAN0,
+                wantsRumble ? PAD_MOTOR_RUMBLE : PAD_MOTOR_STOP
+            );
+
+            rumbleEnabled = wantsRumble;
         }
 
         const u8 triggerL = PAD_TriggerL(PAD_CHAN0);
