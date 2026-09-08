@@ -26,9 +26,24 @@ static void WiiXInput_ClearStates()
 
 static s8 WiiXInput_StickToS8(SHORT value)
 {
-    // XInput sticks are signed 16-bit. libogc PAD stick helpers expose s8.
-    // Dividing by 256 preserves the full range as approximately -128..127.
     return (s8)(value / 256);
+}
+
+static DWORD WiiXInput_SetRumble(int channel, bool enabled)
+{
+    if (!WiiXInput_ValidChannel(channel))
+        return ERROR_BAD_ARGUMENTS;
+
+    XINPUT_VIBRATION vibration;
+    ZeroMemory(&vibration, sizeof(vibration));
+
+    if (enabled)
+    {
+        vibration.wLeftMotorSpeed = 0xFFFF;
+        vibration.wRightMotorSpeed = 0xFFFF;
+    }
+
+    return XInputSetState((DWORD)channel, &vibration);
 }
 
 // ------------------------------------------------------------
@@ -227,6 +242,15 @@ u8 PAD_TriggerR(int pad)
     return (u8)g_current[pad].Gamepad.bRightTrigger;
 }
 
+void PAD_ControlMotor(s32 chan, u32 cmd)
+{
+    if (!WiiXInput_ValidChannel(chan))
+        return;
+
+    const bool enabled = (cmd == PAD_MOTOR_RUMBLE);
+    WiiXInput_SetRumble(chan, enabled);
+}
+
 // ============================================================
 // WPAD implementation
 // ============================================================
@@ -270,4 +294,13 @@ u32 WPAD_ButtonsUp(int chan)
     u32 current = WiiXInput_MapWPAD(g_current[chan].Gamepad);
     u32 previous = WiiXInput_MapWPAD(g_previous[chan].Gamepad);
     return previous & ~current;
+}
+
+s32 WPAD_Rumble(s32 chan, int status)
+{
+    if (!WiiXInput_ValidChannel(chan))
+        return -1;
+
+    DWORD result = WiiXInput_SetRumble(chan, status != 0);
+    return (result == ERROR_SUCCESS) ? 0 : -1;
 }
