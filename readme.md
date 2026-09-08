@@ -4,51 +4,59 @@ Wii2Xenon is an experimental compatibility/porting layer for bringing Wii softwa
 
 ## Branch
 
-**`feature/wiixinput-rumble` — M0.2.3 Wii/GameCube rumble compatibility**
+**`feature/gx360-core` — M0.3.0 standalone graphics backend**
 
-This branch adds vibration output to WiiXInput so Wii/GameCube-style rumble calls can drive an Xbox 360 controller through XInput.
+This branch starts the GX360 milestone by moving the already-tested Xbox 360 Direct3D setup out of `main.cpp` and into a dedicated graphics module.
 
-It is stacked on top of the tested analog-input branch.
+It is stacked on top of the tested WiiXInput rumble branch so digital input, analog input, triggers, and rumble remain available as regression checks while graphics work begins.
 
 ## What this branch adds
 
-- `PAD_MOTOR_STOP`
-- `PAD_MOTOR_RUMBLE`
-- `PAD_MOTOR_STOP_HARD`
-- `PAD_ControlMotor()` -> Xbox 360 `XInputSetState()` vibration
-- `WPAD_Rumble()` -> same vibration backend
-- simple hold/release test for motor start and stop
-
-## Test result
-
-**Status: ✅ tested successfully**
-
-The test was run with an original Xbox 360 controller. Holding the mapped PAD A button enabled vibration and releasing it stopped vibration correctly.
+- `GX360.h` public graphics-backend interface
+- `GX360.cpp` Direct3D/Xenos backend implementation
+- `GX360_Init()`
+- `GX360_Shutdown()`
+- `GX360_Clear()`
+- `GX360_Present()`
+- `GX360_GetDevice()` for later low-level GX compatibility work
+- a smaller `main.cpp` that consumes GX360 instead of owning Direct3D state
+- Visual Studio project entries for the new GX360 source/header files
 
 ```text
-Wii / GameCube API
+Wii-style application code
         |
- PAD_ControlMotor()
-    WPAD_Rumble()
+   future GX API
         |
-    WiiXInput
+      GX360
         |
-  XInputSetState()
+ Direct3D 9 / Xenos
         |
-Xbox 360 controller vibration
+     Xbox 360
 ```
 
-The M0.2.2 analog test remains available in this branch as a regression check.
+## Test target
 
-## Current WiiXInput milestone
+**Status: 🧪 ready for VS2010/Xenia validation**
+
+The expected result is intentionally the same as the previous M0.2.3 test:
+
+- analog sticks still change framebuffer colors
+- LT/RT still control the blue channel
+- holding X still switches to the right stick
+- holding A still enables controller rumble
+
+If all of that still works, it proves that extracting Direct3D into GX360 did not regress WiiXInput and that the graphics backend can operate independently from `main.cpp`.
+
+## Current milestones
 
 ```text
-Digital buttons       ✅
-Analog left stick     ✅
-Analog right stick    ✅
-Analog triggers       ✅
-PAD rumble            ✅
-WPAD rumble backend   ✅
+M0.0  XEX build / boot                    ✅
+M0.1  Direct3D Clear / Present            ✅
+M0.2  WiiXInput digital input             ✅
+M0.2.2 PAD analog / triggers              ✅
+M0.2.3 PAD / WPAD rumble                  ✅
+M0.3.0 Standalone GX360 core              🧪
+M0.3.1 First GX-style primitive           next
 ```
 
 ## Development setup
@@ -59,7 +67,9 @@ WPAD rumble backend   ✅
 
 ## Next direction
 
-After WiiXInput, the next major milestone is **M0.3 — GX360**: extracting graphics code from `main.cpp` and beginning a Wii GX-style graphics compatibility layer over Xbox 360 Direct3D/Xenos.
+Once M0.3.0 is validated, the next step is **M0.3.1 — first GX-style primitive**. The goal is to begin exposing a very small Wii-like graphics API (`GX_Begin`, position/color submission, `GX_End`) while GX360 translates that work to the Xbox 360 graphics backend.
+
+We will implement only the subset required by early test clients instead of trying to reproduce the whole Wii GX/TEV stack at once.
 
 ## Legal note
 
