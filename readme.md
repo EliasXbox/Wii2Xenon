@@ -4,77 +4,76 @@ Wii2Xenon is an experimental compatibility/porting layer for bringing Wii and Ga
 
 ## Branch
 
-**`feature/gx360-primitives` — M0.3.1 first GX-style primitive**
+**`feature/gx360-texture-lod` — M0.4.1 GX texture filtering / LOD metadata**
 
-This branch is the first step from a generic Xbox 360 graphics backend toward an actual GX compatibility surface.
+This branch builds on the first successful textured-quad milestone and makes `GXTexObj` behave more like the texture objects expected by libogc clients.
 
 ## What this branch adds
 
-- minimal `GXCompat.h` interface
-- `GX_Begin()`
-- `GX_Position3f32()`
-- `GX_Color4u8()`
-- `GX_End()`
-- immediate vertex collection for `GX_TRIANGLES`
-- a small shader-based Direct3D pipeline created by GX360
-- a three-vertex RGB triangle regression test in `main.cpp`
-- WiiXInput rumble remains active as a regression check
+- `GX_NEAR` and `GX_LINEAR`
+- `GX_InitTexObjLOD()` compatibility surface
+- storage for min/mag filters, min/max LOD, LOD bias, bias clamp, edge LOD and anisotropy metadata
+- translation of `GX_NEAR` to point filtering on Xbox 360
+- translation of `GX_LINEAR` to bilinear filtering on Xbox 360
+- existing `GX_CLAMP`, `GX_REPEAT` and `GX_MIRROR` wrapping remains supported
+- visual side-by-side filter regression test
+- WiiXInput rumble remains active as an input regression check
 
 ```text
-Wii / GameCube-style GX calls
-          |
-      GXCompat
-          |
-       GX360
-          |
- Direct3D 9+ / Xenos
-          |
-       Xbox 360
+GXTexObj / GX_InitTexObjLOD
+            |
+      GX texture state
+            |
+          GX360
+            |
+ Xbox 360 sampler states
+            |
+          Xenos
 ```
 
 ## Test target
 
-**Status: 🧪 ready for VS2010 / Xenia / real Xbox 360 validation**
+**Status: 🧪 ready for VS2010 / Xenia / later Xbox 360 validation**
 
 Expected result:
 
 - dark background
-- one large triangle near the center of the screen
-- red-ish left vertex
-- green-ish right vertex
-- blue-ish top vertex
-- colors interpolate across the triangle
-- holding A still activates the controller rumble regression test
+- two checkerboard quads side by side
+- left quad uses `GX_NEAR` and should show crisp, hard-edged enlarged texels
+- right quad uses `GX_LINEAR` and should look visibly smoother / blended
+- holding A still activates the rumble regression test
 
-If the project builds but the triangle is missing, check the debug output for `GX360` shader/pipeline messages.
+The source texture is intentionally only 16x16 with a one-pixel checker pattern so the difference between point and bilinear filtering is easy to see.
 
 ## Current milestones
 
 ```text
-M0.0   XEX build / boot                    ✅
-M0.1   Direct3D Clear / Present            ✅
-M0.2   WiiXInput digital input             ✅
-M0.2.2 PAD analog / triggers               ✅
-M0.2.3 PAD / WPAD rumble                  ✅
-M0.3.0 Standalone GX360 core              ✅ Xenia + Xbox 360
-M0.3.1 First GX-style triangle            🧪
+M0.0   XEX build / boot                       ✅
+M0.1   Direct3D Clear / Present               ✅
+M0.2   WiiXInput digital input                ✅
+M0.2.2 PAD analog / triggers                  ✅
+M0.2.3 PAD / WPAD rumble                     ✅
+M0.3.0 Standalone GX360 core                 ✅ Xenia + Xbox 360
+M0.3.1 First GX-style triangle               ✅ Xenia + Xbox 360
+M0.3.2 GX_QUADS + GX_TRIANGLESTRIP           ✅ Xenia / hardware pending
+M0.3.x Interactive 3D triangle rotation      ✅ Xenia / hardware pending
+M0.4.0 UVs + first textured GX quad          ✅ Xenia / hardware pending
+M0.4.1 GX texture filtering / LOD metadata   🧪
 ```
 
-## Why this also matters for GameCube
+## Scope note
 
-The Wii GX API is descended from the GameCube graphics API, so a carefully designed GX360 layer can eventually serve both Wii and GameCube ports. The plan is to grow the compatibility surface from real client needs instead of trying to implement the entire GX/TEV feature set at once.
+`GX_InitTexObjLOD()` currently preserves the full metadata needed by the compatibility surface, but only the non-mip `GX_NEAR` and `GX_LINEAR` behavior is actively mapped to Xbox 360 sampler states. Real mip chains, LOD selection, LOD bias and anisotropy are intentionally deferred until a real client requires them.
 
-A future GameCube client such as a legal, open-source decompilation can therefore reuse the same GX360 direction, while platform-specific OS/input/audio compatibility lives in separate layers.
+The current `GX_TF_RGBA8` upload path still expects a simple linear 32-bit ARGB buffer created by our test code. Native Wii tiled/planar texture conversion is a later milestone.
 
-## Development setup
+## Why this matters for 240p Test Suite
 
-- Visual Studio 2010 + Xbox 360 XDK
-- Xenia and/or Xbox 360 hardware
-- libogc used as a Wii/GameCube API reference
+The Wii 240p Test Suite uses `GX_InitTexObj()` and `GX_InitTexObjLOD()` when preparing textures, so implementing this compatibility surface now reduces the amount of client-specific rewriting we will need later.
 
 ## Next direction
 
-After the first triangle is validated, add additional primitive modes and begin texture support required by the 240p Test Suite and later Wii/GameCube clients.
+After M0.4.1 is validated, the next visual milestone can introduce an external image path (PNG is a good development test), followed by native Wii texture/TPL conversion support required for real Wii assets.
 
 ## Legal note
 
