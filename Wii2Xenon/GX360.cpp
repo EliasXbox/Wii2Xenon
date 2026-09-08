@@ -4,7 +4,7 @@
 
 // ============================================================
 // Wii2Xenon - GX360 core + GX-style primitive/texture backend
-// M0.4.0: UVs + first linear RGBA8 test texture path
+// M0.4.1: GXTexObj LOD metadata + NEAR/LINEAR filtering
 // ============================================================
 
 static IDirect3D9*                  g_pD3D = NULL;
@@ -265,7 +265,36 @@ void GX_InitTexObj(GXTexObj* obj, const void* imageData, GXU16 width, GXU16 heig
     obj->wrapS = wrapS;
     obj->wrapT = wrapT;
     obj->mipmap = mipmap;
+
+    // libogc's ordinary texture setup behaves safely with non-mip point
+    // filtering until GX_InitTexObjLOD overrides these fields.
+    obj->minFilter = GX_NEAR;
+    obj->magFilter = GX_NEAR;
+    obj->minLOD = 0.0f;
+    obj->maxLOD = 0.0f;
+    obj->lodBias = 0.0f;
+    obj->biasClamp = 0;
+    obj->edgeLOD = 0;
+    obj->maxAniso = 0;
+
     obj->nativeTexture = NULL;
+}
+
+void GX_InitTexObjLOD(GXTexObj* obj, GXU8 minFilter, GXU8 magFilter,
+    float minLOD, float maxLOD, float lodBias,
+    GXU8 biasClamp, GXU8 edgeLOD, GXU8 maxAniso)
+{
+    if (obj == NULL)
+        return;
+
+    obj->minFilter = minFilter;
+    obj->magFilter = magFilter;
+    obj->minLOD = minLOD;
+    obj->maxLOD = maxLOD;
+    obj->lodBias = lodBias;
+    obj->biasClamp = biasClamp;
+    obj->edgeLOD = edgeLOD;
+    obj->maxAniso = maxAniso;
 }
 
 static D3DTEXTUREADDRESS GX360_MapWrapMode(GXU8 mode)
@@ -277,6 +306,11 @@ static D3DTEXTUREADDRESS GX360_MapWrapMode(GXU8 mode)
         case GX_CLAMP:
         default: return D3DTADDRESS_CLAMP;
     }
+}
+
+static D3DTEXTUREFILTERTYPE GX360_MapTextureFilter(GXU8 filter)
+{
+    return (filter == GX_LINEAR) ? D3DTEXF_LINEAR : D3DTEXF_POINT;
 }
 
 void GX_LoadTexObj(GXTexObj* obj, GXU8 mapId)
@@ -326,8 +360,8 @@ void GX_LoadTexObj(GXTexObj* obj, GXU8 mapId)
     g_pBoundTexture = texture;
     g_pDevice->SetSamplerState(0, D3DSAMP_ADDRESSU, GX360_MapWrapMode(obj->wrapS));
     g_pDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, GX360_MapWrapMode(obj->wrapT));
-    g_pDevice->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_POINT);
-    g_pDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
+    g_pDevice->SetSamplerState(0, D3DSAMP_MINFILTER, GX360_MapTextureFilter(obj->minFilter));
+    g_pDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, GX360_MapTextureFilter(obj->magFilter));
 }
 
 static bool GX360_BuildQuadTriangles(GXU16* outVertexCount)
