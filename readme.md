@@ -34,18 +34,19 @@ Wii-style application code
      Xbox 360
 ```
 
-## Test target
+## Test result
 
-**Status: 🧪 ready for VS2010/Xenia validation**
+**Status: ✅ validated on Xenia and real Xbox 360 hardware**
 
-The expected result is intentionally the same as the previous M0.2.3 test:
+The regression test behaved identically on the emulator and on real Xbox 360 hardware:
 
-- analog sticks still change framebuffer colors
-- LT/RT still control the blue channel
-- holding X still switches to the right stick
-- holding A still enables controller rumble
+- analog sticks changed framebuffer colors correctly
+- LT/RT controlled the blue channel
+- holding X switched to the right stick
+- holding A enabled controller rumble
+- GX360 initialization, clear, and present remained stable after being moved out of `main.cpp`
 
-If all of that still works, it proves that extracting Direct3D into GX360 did not regress WiiXInput and that the graphics backend can operate independently from `main.cpp`.
+This validates the M0.3.0 module split and gives the project a stable graphics backend to build the Wii-style compatibility layer on top of.
 
 ## Current milestones
 
@@ -55,7 +56,7 @@ M0.1  Direct3D Clear / Present            ✅
 M0.2  WiiXInput digital input             ✅
 M0.2.2 PAD analog / triggers              ✅
 M0.2.3 PAD / WPAD rumble                  ✅
-M0.3.0 Standalone GX360 core              🧪
+M0.3.0 Standalone GX360 core              ✅ Xenia + Xbox 360
 M0.3.1 First GX-style primitive           next
 ```
 
@@ -67,7 +68,7 @@ M0.3.1 First GX-style primitive           next
 
 ## Next direction
 
-Once M0.3.0 is validated, the next step is **M0.3.1 — first GX-style primitive**. The goal is to begin exposing a very small Wii-like graphics API (`GX_Begin`, position/color submission, `GX_End`) while GX360 translates that work to the Xbox 360 graphics backend.
+The next step is **M0.3.1 — first GX-style primitive**. The goal is to begin exposing a very small Wii-like graphics API (`GX_Begin`, position/color submission, `GX_End`) while GX360 translates that work to the Xbox 360 graphics backend.
 
 We will implement only the subset required by early test clients instead of trying to reproduce the whole Wii GX/TEV stack at once.
 
