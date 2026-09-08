@@ -1,64 +1,11 @@
 #include <xtl.h>
+#include "GX360.h"
 #include "WiiXInput.h"
 
 // ============================================================
-// Wii2Xenon - M0.2.3
-// GameCube PAD analog + rumble test
+// Wii2Xenon - M0.3.0
+// GX360 core extraction + WiiXInput regression test
 // ============================================================
-
-IDirect3D9*       g_pD3D    = NULL;
-IDirect3DDevice9* g_pDevice = NULL;
-
-bool GX360_Init()
-{
-    OutputDebugStringA("[Wii2Xenon/GX360] Initializing Direct3D...\n");
-
-    g_pD3D = Direct3DCreate9(D3D_SDK_VERSION);
-    if (g_pD3D == NULL)
-        return false;
-
-    D3DPRESENT_PARAMETERS params;
-    ZeroMemory(&params, sizeof(params));
-
-    params.BackBufferWidth = 1280;
-    params.BackBufferHeight = 720;
-    params.BackBufferFormat = D3DFMT_A8R8G8B8;
-    params.BackBufferCount = 1;
-    params.EnableAutoDepthStencil = FALSE;
-    params.SwapEffect = D3DSWAPEFFECT_DISCARD;
-    params.PresentationInterval = D3DPRESENT_INTERVAL_ONE;
-
-    HRESULT hr = g_pD3D->CreateDevice(
-        D3DADAPTER_DEFAULT,
-        D3DDEVTYPE_HAL,
-        NULL,
-        D3DCREATE_HARDWARE_VERTEXPROCESSING,
-        &params,
-        &g_pDevice
-    );
-
-    if (FAILED(hr))
-        return false;
-
-    OutputDebugStringA("[Wii2Xenon/GX360] Direct3D initialized!\n");
-    return true;
-}
-
-void GX360_Clear(D3DCOLOR frameColor)
-{
-    if (g_pDevice == NULL)
-        return;
-
-    g_pDevice->Clear(0, NULL, D3DCLEAR_TARGET, frameColor, 1.0f, 0);
-}
-
-void GX360_Present()
-{
-    if (g_pDevice == NULL)
-        return;
-
-    g_pDevice->Present(NULL, NULL, NULL, NULL);
-}
 
 static u8 AxisToColor(s8 value)
 {
@@ -75,19 +22,20 @@ static u8 AxisToColor(s8 value)
 VOID __cdecl main()
 {
     OutputDebugStringA("============================================\n");
-    OutputDebugStringA(" Wii2Xenon Runtime - M0.2.3\n");
-    OutputDebugStringA(" GameCube PAD Analog + Rumble Test\n");
+    OutputDebugStringA(" Wii2Xenon Runtime - M0.3.0\n");
+    OutputDebugStringA(" GX360 Core Extraction Test\n");
     OutputDebugStringA("============================================\n");
 
     if (!GX360_Init())
     {
-        OutputDebugStringA("[Wii2Xenon] FATAL: Graphics initialization failed!\n");
+        OutputDebugStringA("[Wii2Xenon] FATAL: GX360 initialization failed!\n");
         for (;;)
             Sleep(1000);
     }
 
     PAD_Init();
 
+    OutputDebugStringA("[Wii2Xenon] GX360 is now a standalone module.\n");
     OutputDebugStringA("[Wii2Xenon] Left stick controls red/green.\n");
     OutputDebugStringA("[Wii2Xenon] LT/RT control blue.\n");
     OutputDebugStringA("[Wii2Xenon] Hold X to test the right stick.\n");
@@ -97,7 +45,6 @@ VOID __cdecl main()
 
     for (;;)
     {
-        // One PAD hardware scan per frame.
         PAD_ScanPads();
 
         const u16 held = PAD_ButtonsHeld(PAD_CHAN0);
