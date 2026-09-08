@@ -32,6 +32,12 @@ enum GXTexWrapMode
     GX_MIRROR = 2
 };
 
+enum GXTexFilter
+{
+    GX_NEAR   = 0,
+    GX_LINEAR = 1
+};
+
 enum GXTexFmt
 {
     GX_TF_RGBA8 = 6
@@ -46,6 +52,18 @@ struct GXTexObj
     GXU8 wrapS;
     GXU8 wrapT;
     GXU8 mipmap;
+
+    // M0.4.1: store the libogc-style LOD/filter description even though
+    // full mip-chain/LOD behavior is intentionally deferred for now.
+    GXU8 minFilter;
+    GXU8 magFilter;
+    float minLOD;
+    float maxLOD;
+    float lodBias;
+    GXU8 biasClamp;
+    GXU8 edgeLOD;
+    GXU8 maxAniso;
+
     void* nativeTexture;
 };
 
@@ -60,4 +78,9 @@ void GX_End(void);
 // will be added later before real Wii assets are treated as compatible.
 void GX_InitTexObj(GXTexObj* obj, const void* imageData, GXU16 width, GXU16 height,
     GXU32 format, GXU8 wrapS, GXU8 wrapT, GXU8 mipmap);
+
+void GX_InitTexObjLOD(GXTexObj* obj, GXU8 minFilter, GXU8 magFilter,
+    float minLOD, float maxLOD, float lodBias,
+    GXU8 biasClamp, GXU8 edgeLOD, GXU8 maxAniso);
+
 void GX_LoadTexObj(GXTexObj* obj, GXU8 mapId);
