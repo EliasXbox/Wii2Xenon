@@ -2,58 +2,56 @@
 
 Wii2Xenon is an experimental compatibility/porting layer for bringing Wii software concepts and APIs to the Xbox 360.
 
-The project is currently focused on building the runtime incrementally instead of attempting a full game port all at once.
+## Branch
 
-## Current status
+**`feature/wiixinput-events` — M0.2.1 button event semantics**
 
-- M0.0 — Minimal Xbox 360 XEX builds and boots: ✅
-- M0.1 — Direct3D framebuffer clear + Present: ✅
-- M0.2 — Basic WiiXInput (`WPAD_*` -> XInput): ✅
-- Next — expand WiiXInput (`PAD_*`, analog input, rumble) and begin GX360 graphics compatibility
+This branch focuses on making Wii-style input events behave correctly on top of Xbox 360 XInput.
 
-## Current architecture
+The important distinction is between a button being held continuously and the one-frame transitions produced when it is pressed or released.
+
+## Focus of this branch
+
+- `WPAD_ButtonsHeld()`
+- `WPAD_ButtonsDown()`
+- `WPAD_ButtonsUp()`
+- one hardware scan per frame
+- debug logging for press/release transitions
+- preservation of the original M0.2 color-button test
+
+Expected behavior:
 
 ```text
-Wii-style application code
+Press button   -> Down once + Held
+Keep holding   -> Held only
+Release button -> Up once
+```
+
+This behavior is important for Wii software menus and gameplay logic where a single press must not repeat every frame.
+
+## Architecture under test
+
+```text
+Xbox 360 Controller
         |
-        +--> WiiXInput --> XInput
+      XInput
         |
-        +--> GX360 ------> Direct3D 9 / Xenos
+    WiiXInput
         |
-        +--> Runtime ----> Xbox 360 APIs
+ WPAD_ButtonsHeld
+ WPAD_ButtonsDown
+ WPAD_ButtonsUp
 ```
 
 ## Development setup
 
-### Xbox 360 side
-
-- Visual Studio 2010
-- Xbox 360 XDK
-- Xenia and/or Xbox 360 hardware for testing
-
-### Wii reference side
-
-- devkitPro
-- devkitPPC
-- libogc
-
-libogc is used as an API/reference target for compatibility work. Wii2Xenon is not intended to require the Wii toolchain when building the Xbox 360 target.
-
-## Repository layout
-
-```text
-Wii2Xenon/
-├── main.cpp
-├── WiiXInput.h
-├── WiiXInput.cpp
-└── Wii2Xenon.vcxproj
-```
-
-The layout will expand as GX360 and runtime modules are introduced.
+- Visual Studio 2010 + Xbox 360 XDK
+- Xenia and/or Xbox 360 hardware
+- libogc used as the Wii API reference
 
 ## Project state
 
-Early work in progress. APIs and structure may change frequently while compatibility layers are being implemented and tested.
+M0.2.1 test branch. Changes here are intentionally focused on digital button-event behavior so they can be validated independently from analog input and rumble work.
 
 ## Legal note
 
