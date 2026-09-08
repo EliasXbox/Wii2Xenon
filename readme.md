@@ -2,14 +2,23 @@
 
 Wii2Xenon is an experimental compatibility/porting layer for bringing Wii software concepts and APIs to the Xbox 360.
 
-The project is currently focused on building the runtime incrementally instead of attempting a full game port all at once.
+The project is being built incrementally as a reusable runtime/compatibility layer rather than as a one-off port of a single game.
+
+## Branch
+
+**`main` — stable project baseline**
+
+This branch is the primary integration target. Experimental work is developed and tested in feature branches before being folded back into the main project.
 
 ## Current status
 
 - M0.0 — Minimal Xbox 360 XEX builds and boots: ✅
 - M0.1 — Direct3D framebuffer clear + Present: ✅
-- M0.2 — Basic WiiXInput (`WPAD_*` -> XInput): ✅
-- Next — expand WiiXInput (`PAD_*`, analog input, rumble) and begin GX360 graphics compatibility
+- M0.2 — Basic WiiXInput (`WPAD_*` / `PAD_*` -> XInput): ✅
+- M0.2.1 — Button event semantics (`Held` / `Down` / `Up`): implemented / test branch
+- M0.2.2 — GameCube PAD analog sticks + triggers: ✅ tested
+- M0.2.3 — PAD/WPAD rumble -> Xbox 360 vibration: ✅ tested
+- Next — M0.3: extract GX360 from `main.cpp` and begin graphics compatibility primitives
 
 ## Current architecture
 
@@ -22,6 +31,15 @@ Wii-style application code
         |
         +--> Runtime ----> Xbox 360 APIs
 ```
+
+## Active branches
+
+- `cleanup/repo-baseline` — repository cleanup/documentation baseline
+- `feature/wiixinput-events` — Wii-style button press/hold/release events
+- `feature/wiixinput-analog` — GameCube PAD analog sticks and triggers
+- `feature/wiixinput-rumble` — Wii/GameCube rumble mapped to Xbox 360 vibration
+
+Each branch has its own README variant describing its purpose and test target.
 
 ## Development setup
 
