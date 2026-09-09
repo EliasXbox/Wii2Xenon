@@ -9,6 +9,8 @@ typedef unsigned char  GXU8;
 typedef unsigned short GXU16;
 typedef unsigned int   GXU32;
 
+#define GX_VTXFMT0 0
+
 enum GXPrimitive
 {
     GX_POINTS        = 0xB8,
@@ -53,8 +55,6 @@ struct GXTexObj
     GXU8 wrapT;
     GXU8 mipmap;
 
-    // M0.4.1: store the libogc-style LOD/filter description even though
-    // full mip-chain/LOD behavior is intentionally deferred for now.
     GXU8 minFilter;
     GXU8 magFilter;
     float minLOD;
@@ -69,13 +69,12 @@ struct GXTexObj
 
 void GX_Begin(GXU8 primitive, GXU8 vtxfmt, GXU16 vertexCount);
 void GX_Position3f32(float x, float y, float z);
+void GX_Position2f32(float x, float y);
 void GX_Color4u8(GXU8 r, GXU8 g, GXU8 b, GXU8 a);
 void GX_TexCoord2f32(float s, float t);
 void GX_End(void);
+void GX_DrawDone(void);
 
-// M0.4 texture foundation. The current RGBA8 upload path expects a simple
-// linear 32-bit ARGB test buffer; native Wii tiled/planar RGBA8 conversion
-// will be added later before real Wii assets are treated as compatible.
 void GX_InitTexObj(GXTexObj* obj, const void* imageData, GXU16 width, GXU16 height,
     GXU32 format, GXU8 wrapS, GXU8 wrapT, GXU8 mipmap);
 
