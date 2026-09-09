@@ -51,6 +51,22 @@ static const char* FindPlaceholderPath(void)
     return NULL;
 }
 
+static void DebugHRESULT(HRESULT hr)
+{
+    static const char hex[] = "0123456789ABCDEF";
+    char message[] = "[M0.4.2a] D3DX PNG decode FAILED. HRESULT=0x00000000\n";
+    unsigned int value = (unsigned int)hr;
+    const int firstDigit = 47;
+
+    for (int i = 0; i < 8; ++i)
+    {
+        const int shift = (7 - i) * 4;
+        message[firstDigit + i] = hex[(value >> shift) & 0xF];
+    }
+
+    OutputDebugStringA(message);
+}
+
 static bool LoadPNG128(const char* path)
 {
     if (path == NULL)
@@ -83,10 +99,7 @@ static bool LoadPNG128(const char* path)
 
     if (FAILED(hr) || sourceTexture == NULL)
     {
-        char message[128];
-        sprintf_s(message, sizeof(message),
-            "[M0.4.2a] D3DX PNG decode FAILED. HRESULT=0x%08X\n", (unsigned int)hr);
-        OutputDebugStringA(message);
+        DebugHRESULT(hr);
         return false;
     }
 
