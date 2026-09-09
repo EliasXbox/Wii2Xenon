@@ -5,80 +5,48 @@
 #include "WiiXInput.h"
 
 // ============================================================
-// Wii2Xenon - M0.4.2a
-// Diagnose Xbox filesystem path first, then PNG decoding.
+// Wii2Xenon - M0.4.3
+// Four external PNG textures + runtime switching through PAD.
+// A -> placeholder4, B -> placeholder2,
+// X -> placeholder3, Y -> placeholder1.
 // ============================================================
 
 static const GXU16 PNG_TEXTURE_SIZE = 128;
-static DWORD g_PngPixels[PNG_TEXTURE_SIZE * PNG_TEXTURE_SIZE];
+static const int PNG_TEXTURE_COUNT = 4;
+static DWORD g_PngPixels[PNG_TEXTURE_COUNT][PNG_TEXTURE_SIZE * PNG_TEXTURE_SIZE];
+static GXTexObj g_PngTextures[PNG_TEXTURE_COUNT];
 
-static bool FileExists(const char* path)
+static const char* g_PngPaths[PNG_TEXTURE_COUNT] =
 {
-    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, NULL,
-        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    "game:\\placeholders\\placeholder4.png", // A
+    "game:\\placeholders\\placeholder2.png", // B
+    "game:\\placeholders\\placeholder3.png", // X
+    "game:\\placeholders\\placeholder1.png"  // Y
+};
 
-    if (file == INVALID_HANDLE_VALUE)
-        return false;
-
-    CloseHandle(file);
-    return true;
-}
-
-static void DebugPathResult(const char* path, bool exists)
+static void DebugPath(const char* prefix, const char* path)
 {
-    OutputDebugStringA(exists ? "[M0.4.2a] FOUND: " : "[M0.4.2a] MISS : ");
+    OutputDebugStringA(prefix);
     OutputDebugStringA(path);
     OutputDebugStringA("\n");
 }
 
-static const char* FindPlaceholderPath(void)
+static bool LoadPNG128(const char* path, DWORD* destinationPixels)
 {
-    static const char* paths[] =
-    {
-        "game:\\placeholders\\placeholder4.png",
-        "D:\\placeholders\\placeholder4.png",
-        "placeholders\\placeholder4.png"
-    };
-
-    for (int i = 0; i < 3; ++i)
-    {
-        const bool exists = FileExists(paths[i]);
-        DebugPathResult(paths[i], exists);
-        if (exists)
-            return paths[i];
-    }
-
-    return NULL;
-}
-
-static void DebugHRESULT(HRESULT hr)
-{
-    static const char hex[] = "0123456789ABCDEF";
-    char message[] = "[M0.4.2a] D3DX PNG decode FAILED. HRESULT=0x00000000\n";
-    unsigned int value = (unsigned int)hr;
-    const int firstDigit = 47;
-
-    for (int i = 0; i < 8; ++i)
-    {
-        const int shift = (7 - i) * 4;
-        message[firstDigit + i] = hex[(value >> shift) & 0xF];
-    }
-
-    OutputDebugStringA(message);
-}
-
-static bool LoadPNG128(const char* path)
-{
-    if (path == NULL)
-        return false;
-
     IDirect3DDevice9* device = GX360_GetDevice();
     if (device == NULL)
         return false;
 
-    OutputDebugStringA("[M0.4.2a] File exists. Trying D3DX PNG decode: ");
-    OutputDebugStringA(path);
-    OutputDebugStringA("\n");
+    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, NULL,
+        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (file == INVALID_HANDLE_VALUE)
+    {
+        DebugPath("[M0.4.3] MISS: ", path);
+        return false;
+    }
+    CloseHandle(file);
+
+    DebugPath("[M0.4.3] FOUND: ", path);
 
     IDirect3DTexture9* sourceTexture = NULL;
     HRESULT hr = D3DXCreateTextureFromFileExA(
@@ -99,7 +67,7 @@ static bool LoadPNG128(const char* path)
 
     if (FAILED(hr) || sourceTexture == NULL)
     {
-        DebugHRESULT(hr);
+        DebugPath("[M0.4.3] D3DX decode FAILED: ", path);
         return false;
     }
 
@@ -109,37 +77,51 @@ static bool LoadPNG128(const char* path)
     if (FAILED(hr))
     {
         sourceTexture->Release();
-        OutputDebugStringA("[M0.4.2a] PNG texture LockRect failed.\n");
+        DebugPath("[M0.4.3] LockRect FAILED: ", path);
         return false;
     }
 
     for (GXU16 y = 0; y < PNG_TEXTURE_SIZE; ++y)
     {
         const DWORD* source = (const DWORD*)((const BYTE*)locked.pBits + y * locked.Pitch);
-        DWORD* destination = &g_PngPixels[y * PNG_TEXTURE_SIZE];
+        DWORD* destination = &destinationPixels[y * PNG_TEXTURE_SIZE];
         for (GXU16 x = 0; x < PNG_TEXTURE_SIZE; ++x)
             destination[x] = source[x];
     }
 
     sourceTexture->UnlockRect(0);
     sourceTexture->Release();
-
-    OutputDebugStringA("[M0.4.2a] SUCCESS: PNG decoded to 128x128 ARGB pixels.\n");
+    DebugPath("[M0.4.3] DECODED: ", path);
     return true;
 }
 
-static void BuildFallbackTexture(void)
+static void BuildFallbackTexture(DWORD* pixels, int index)
 {
     for (GXU16 y = 0; y < PNG_TEXTURE_SIZE; ++y)
     {
         for (GXU16 x = 0; x < PNG_TEXTURE_SIZE; ++x)
         {
-            const bool alternate = (((x / 8) + (y / 8)) & 1) != 0;
-            g_PngPixels[y * PNG_TEXTURE_SIZE + x] = alternate
+            const bool alternate = (((x / 8) + (y / 8) + index) & 1) != 0;
+            pixels[y * PNG_TEXTURE_SIZE + x] = alternate
                 ? D3DCOLOR_ARGB(255, 255, 70, 220)
                 : D3DCOLOR_ARGB(255, 35, 35, 45);
         }
     }
+}
+
+static void InitTexture(int index)
+{
+    if (!LoadPNG128(g_PngPaths[index], g_PngPixels[index]))
+        BuildFallbackTexture(g_PngPixels[index], index);
+
+    ZeroMemory(&g_PngTextures[index], sizeof(GXTexObj));
+    GX_InitTexObj(&g_PngTextures[index], g_PngPixels[index],
+        PNG_TEXTURE_SIZE, PNG_TEXTURE_SIZE,
+        GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, 0);
+    GX_InitTexObjLOD(&g_PngTextures[index],
+        GX_LINEAR, GX_LINEAR,
+        0.0f, 0.0f, 0.0f,
+        0, 0, 0);
 }
 
 static void DrawTexture(GXTexObj* texture)
@@ -169,8 +151,9 @@ static void DrawTexture(GXTexObj* texture)
 VOID __cdecl main()
 {
     OutputDebugStringA("============================================\n");
-    OutputDebugStringA(" Wii2Xenon Runtime - M0.4.2a\n");
-    OutputDebugStringA(" PNG Filesystem Diagnostic\n");
+    OutputDebugStringA(" Wii2Xenon Runtime - M0.4.3\n");
+    OutputDebugStringA(" Four PNG Runtime Texture Switching\n");
+    OutputDebugStringA(" A=4 B=2 X=3 Y=1\n");
     OutputDebugStringA("============================================\n");
 
     if (!GX360_Init())
@@ -181,32 +164,29 @@ VOID __cdecl main()
     }
 
     PAD_Init();
+
+    for (int i = 0; i < PNG_TEXTURE_COUNT; ++i)
+        InitTexture(i);
+
+    int activeTexture = 0;
     bool rumbleEnabled = false;
 
-    const char* pngPath = FindPlaceholderPath();
-    if (pngPath == NULL)
-        OutputDebugStringA("[M0.4.2a] No candidate filesystem path could open placeholder4.png.\n");
-
-    if (!LoadPNG128(pngPath))
-    {
-        OutputDebugStringA("[M0.4.2a] Using fallback texture. Check FOUND/MISS and HRESULT messages above.\n");
-        BuildFallbackTexture();
-    }
-
-    GXTexObj pngTexture;
-    ZeroMemory(&pngTexture, sizeof(pngTexture));
-    GX_InitTexObj(&pngTexture, g_PngPixels,
-        PNG_TEXTURE_SIZE, PNG_TEXTURE_SIZE,
-        GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, 0);
-    GX_InitTexObjLOD(&pngTexture,
-        GX_LINEAR, GX_LINEAR,
-        0.0f, 0.0f, 0.0f,
-        0, 0, 0);
+    OutputDebugStringA("[M0.4.3] Ready. A/B/X/Y switches external PNG texture.\n");
 
     for (;;)
     {
         PAD_ScanPads();
         const u16 held = PAD_ButtonsHeld(PAD_CHAN0);
+        const u16 down = PAD_ButtonsDown(PAD_CHAN0);
+
+        if (down & PAD_BUTTON_A)
+            activeTexture = 0;
+        else if (down & PAD_BUTTON_B)
+            activeTexture = 1;
+        else if (down & PAD_BUTTON_X)
+            activeTexture = 2;
+        else if (down & PAD_BUTTON_Y)
+            activeTexture = 3;
 
         const bool wantsRumble = (held & PAD_BUTTON_A) != 0;
         if (wantsRumble != rumbleEnabled)
@@ -217,7 +197,7 @@ VOID __cdecl main()
         }
 
         GX360_Clear(D3DCOLOR_XRGB(24, 28, 40));
-        DrawTexture(&pngTexture);
+        DrawTexture(&g_PngTextures[activeTexture]);
         GX360_Present();
     }
 }
