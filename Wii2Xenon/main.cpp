@@ -5,18 +5,64 @@
 #include "WiiXInput.h"
 
 // ============================================================
-// Wii2Xenon - M0.4.2
-// External PNG -> RGBA/ARGB pixels -> GXTexObj -> GX360
+// Wii2Xenon - M0.4.2a
+// Diagnose Xbox filesystem path first, then PNG decoding.
 // ============================================================
 
 static const GXU16 PNG_TEXTURE_SIZE = 128;
 static DWORD g_PngPixels[PNG_TEXTURE_SIZE * PNG_TEXTURE_SIZE];
 
+static bool FileExists(const char* path)
+{
+    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, NULL,
+        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if (file == INVALID_HANDLE_VALUE)
+        return false;
+
+    CloseHandle(file);
+    return true;
+}
+
+static void DebugPathResult(const char* path, bool exists)
+{
+    OutputDebugStringA(exists ? "[M0.4.2a] FOUND: " : "[M0.4.2a] MISS : ");
+    OutputDebugStringA(path);
+    OutputDebugStringA("\n");
+}
+
+static const char* FindPlaceholderPath(void)
+{
+    static const char* paths[] =
+    {
+        "game:\\placeholders\\placeholder4.png",
+        "D:\\placeholders\\placeholder4.png",
+        "placeholders\\placeholder4.png"
+    };
+
+    for (int i = 0; i < 3; ++i)
+    {
+        const bool exists = FileExists(paths[i]);
+        DebugPathResult(paths[i], exists);
+        if (exists)
+            return paths[i];
+    }
+
+    return NULL;
+}
+
 static bool LoadPNG128(const char* path)
 {
+    if (path == NULL)
+        return false;
+
     IDirect3DDevice9* device = GX360_GetDevice();
     if (device == NULL)
         return false;
+
+    OutputDebugStringA("[M0.4.2a] File exists. Trying D3DX PNG decode: ");
+    OutputDebugStringA(path);
+    OutputDebugStringA("\n");
 
     IDirect3DTexture9* sourceTexture = NULL;
     HRESULT hr = D3DXCreateTextureFromFileExA(
@@ -37,7 +83,10 @@ static bool LoadPNG128(const char* path)
 
     if (FAILED(hr) || sourceTexture == NULL)
     {
-        OutputDebugStringA("[Wii2Xenon/M0.4.2] PNG load failed.\n");
+        char message[128];
+        sprintf_s(message, sizeof(message),
+            "[M0.4.2a] D3DX PNG decode FAILED. HRESULT=0x%08X\n", (unsigned int)hr);
+        OutputDebugStringA(message);
         return false;
     }
 
@@ -47,7 +96,7 @@ static bool LoadPNG128(const char* path)
     if (FAILED(hr))
     {
         sourceTexture->Release();
-        OutputDebugStringA("[Wii2Xenon/M0.4.2] PNG texture LockRect failed.\n");
+        OutputDebugStringA("[M0.4.2a] PNG texture LockRect failed.\n");
         return false;
     }
 
@@ -62,7 +111,7 @@ static bool LoadPNG128(const char* path)
     sourceTexture->UnlockRect(0);
     sourceTexture->Release();
 
-    OutputDebugStringA("[Wii2Xenon/M0.4.2] PNG decoded to 128x128 ARGB pixels.\n");
+    OutputDebugStringA("[M0.4.2a] SUCCESS: PNG decoded to 128x128 ARGB pixels.\n");
     return true;
 }
 
@@ -107,8 +156,8 @@ static void DrawTexture(GXTexObj* texture)
 VOID __cdecl main()
 {
     OutputDebugStringA("============================================\n");
-    OutputDebugStringA(" Wii2Xenon Runtime - M0.4.2\n");
-    OutputDebugStringA(" External PNG Texture Test\n");
+    OutputDebugStringA(" Wii2Xenon Runtime - M0.4.2a\n");
+    OutputDebugStringA(" PNG Filesystem Diagnostic\n");
     OutputDebugStringA("============================================\n");
 
     if (!GX360_Init())
@@ -121,12 +170,13 @@ VOID __cdecl main()
     PAD_Init();
     bool rumbleEnabled = false;
 
-    // First try the path requested for the M0.4.2 placeholder. If the PNG
-    // isn't present beside the XEX/runtime working directory, the fallback
-    // texture makes that failure immediately visible instead of a black quad.
-    if (!LoadPNG128("placeholders\\placeholder4.png"))
+    const char* pngPath = FindPlaceholderPath();
+    if (pngPath == NULL)
+        OutputDebugStringA("[M0.4.2a] No candidate filesystem path could open placeholder4.png.\n");
+
+    if (!LoadPNG128(pngPath))
     {
-        OutputDebugStringA("[Wii2Xenon/M0.4.2] Using fallback texture. Copy placeholders/placeholder4.png beside the XEX tree.\n");
+        OutputDebugStringA("[M0.4.2a] Using fallback texture. Check FOUND/MISS and HRESULT messages above.\n");
         BuildFallbackTexture();
     }
 
@@ -139,9 +189,6 @@ VOID __cdecl main()
         GX_LINEAR, GX_LINEAR,
         0.0f, 0.0f, 0.0f,
         0, 0, 0);
-
-    OutputDebugStringA("[Wii2Xenon/M0.4.2] Rendering external PNG through GX360.\n");
-    OutputDebugStringA("[Wii2Xenon] Hold A for rumble regression test.\n");
 
     for (;;)
     {
