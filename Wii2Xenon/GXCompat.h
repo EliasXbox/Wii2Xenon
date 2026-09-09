@@ -3,6 +3,7 @@
 typedef unsigned char GXU8;
 typedef unsigned short GXU16;
 typedef unsigned int GXU32;
+typedef float Mtx44[4][4];
 #define GX_VTXFMT0 0
 #define GX_VA_POS 9
 #define GX_VA_CLR0 11
@@ -22,6 +23,7 @@ typedef unsigned int GXU32;
 #define GX_LO_CLEAR 0
 #define GX_TRUE 1
 #define GX_FALSE 0
+#define GX_ORTHOGRAPHIC 1
 
 enum GXPrimitive { GX_POINTS=0xB8, GX_LINES=0xA8, GX_LINESTRIP=0xB0, GX_TRIANGLES=0x90, GX_TRIANGLESTRIP=0x98, GX_TRIANGLEFAN=0xA0, GX_QUADS=0x80 };
 enum GXTexMapID { GX_TEXMAP0=0 };
@@ -45,8 +47,6 @@ void GX_InitTexObj(GXTexObj* obj,const void* imageData,GXU16 width,GXU16 height,
 void GX_InitTexObjLOD(GXTexObj* obj,GXU8 minFilter,GXU8 magFilter,float minLOD,float maxLOD,float lodBias,GXU8 biasClamp,GXU8 edgeLOD,GXU8 maxAniso);
 void GX_LoadTexObj(GXTexObj* obj,GXU8 mapId);
 
-// P0.2 scene compatibility. Vertex-description calls are accepted as no-ops
-// while GX360 uses its current fixed immediate-mode vertex layout.
 void GX_SetViewport(float xOrigin,float yOrigin,float width,float height,float nearZ,float farZ);
 void GX_InvVtxCache(void);
 void GX_ClearVtxDesc(void);
@@ -56,3 +56,7 @@ void GX_SetZMode(GXU8 enable,GXU8 func,GXU8 updateEnable);
 void GX_SetBlendMode(GXU8 type,GXU8 srcFactor,GXU8 dstFactor,GXU8 op);
 void GX_SetAlphaUpdate(GXU8 enable);
 void GX_SetColorUpdate(GXU8 enable);
+
+// P0.3 projection compatibility.
+void guOrtho(Mtx44 m,float top,float bottom,float left,float right,float nearZ,float farZ);
+void GX_LoadProjectionMtx(const Mtx44 m,GXU8 type);
