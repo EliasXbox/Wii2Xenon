@@ -8,8 +8,9 @@
 #include "GXCompat.h"
 
 // Common libogc scalar aliases used by the 240p Test Suite.
-typedef float  f32;
-typedef double f64;
+typedef float         f32;
+typedef double        f64;
+typedef unsigned long ulong;
 
 #ifndef TRUE
 #define TRUE 1
@@ -17,6 +18,10 @@ typedef double f64;
 
 #ifndef FALSE
 #define FALSE 0
+#endif
+
+#ifndef GX_FALSE
+#define GX_FALSE 0
 #endif
 
 // Early bootstrap note:
