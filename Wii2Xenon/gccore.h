@@ -11,6 +11,8 @@
 typedef float         f32;
 typedef double        f64;
 typedef unsigned long ulong;
+typedef float         Mtx[3][4];
+typedef float         Mtx44[4][4];
 
 #ifndef TRUE
 #define TRUE 1
