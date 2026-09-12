@@ -10,6 +10,7 @@ extern "C" {
 }
 #include "GXCompatExtra.cpp"
 #include "GXSceneCompat.cpp"
+#include "WiiTPL360.cpp"
 #include "../../240pTestSuite/240psuite/Wii/240pSuite/source/wii2xenon_image.c"
 
 u8 EndProgram=0;
@@ -71,32 +72,29 @@ static void WriteBE32(unsigned char* p,unsigned int value) {
 }
 
 static bool RunP06aTPLParserTest(void) {
- // Minimal single-texture TPL blob following the same header/descriptor/image
- // layout used by libogc. P0.6a validates metadata parsing only; pixel decode
- // becomes P0.6b/P0.6c.
  unsigned char tpl[64];
  ZeroMemory(tpl,sizeof(tpl));
 
- WriteBE32(tpl+0,0x0020AF30); // TPL magic/version
- WriteBE32(tpl+4,1);          // one texture
- WriteBE32(tpl+8,12);         // descriptor table starts at 0x0C
- WriteBE32(tpl+12,20);        // image header offset
- WriteBE32(tpl+16,0);         // no palette
+ WriteBE32(tpl+0,0x0020AF30);
+ WriteBE32(tpl+4,1);
+ WriteBE32(tpl+8,12);
+ WriteBE32(tpl+12,20);
+ WriteBE32(tpl+16,0);
 
- WriteBE16(tpl+20,16);        // height
- WriteBE16(tpl+22,16);        // width
+ WriteBE16(tpl+20,16);
+ WriteBE16(tpl+22,16);
  WriteBE32(tpl+24,GX_TF_RGBA8);
- WriteBE32(tpl+28,56);        // dummy image data offset inside blob
+ WriteBE32(tpl+28,56);
  WriteBE32(tpl+32,GX_CLAMP);
  WriteBE32(tpl+36,GX_CLAMP);
  WriteBE32(tpl+40,GX_NEAR);
  WriteBE32(tpl+44,GX_NEAR);
- WriteBE32(tpl+48,0);         // lodBias = 0.0f
- tpl[52]=0;                   // edgeLOD
- tpl[53]=0;                   // minLOD
- tpl[54]=0;                   // maxLOD
- tpl[55]=0;                   // unpacked
- tpl[56]=0xAA;                // dummy texture byte so offset is valid
+ WriteBE32(tpl+48,0);
+ tpl[52]=0;
+ tpl[53]=0;
+ tpl[54]=0;
+ tpl[55]=0;
+ tpl[56]=0xAA;
 
  WiiTPLArchive archive;
  ZeroMemory(&archive,sizeof(archive));
