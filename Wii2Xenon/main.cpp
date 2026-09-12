@@ -2,6 +2,7 @@
 #include <d3dx9.h>
 #include "GX360.h"
 #include "WiiXInput.h"
+#include "WiiTPL360.h"
 #include "gccore.h"
 #define WII2XENON 1
 extern "C" {
@@ -13,9 +14,6 @@ extern "C" {
 
 u8 EndProgram=0;
 
-// P0.5: first real visual asset from the 240p Test Suite repository.
-// Convergence-01-grid.png is 16x16, but we draw it enlarged so the result is
-// easy to verify on both Xenia and a real Xbox 360.
 static const GXU16 P0_TEXTURE_WIDTH=16;
 static const GXU16 P0_TEXTURE_HEIGHT=16;
 static DWORD g_P0Pixels[P0_TEXTURE_WIDTH*P0_TEXTURE_HEIGHT];
@@ -60,10 +58,70 @@ static void BuildFallbackTexture(void) {
   }
 }
 
+static void WriteBE16(unsigned char* p,unsigned short value) {
+ p[0]=(unsigned char)((value>>8)&0xFF);
+ p[1]=(unsigned char)(value&0xFF);
+}
+
+static void WriteBE32(unsigned char* p,unsigned int value) {
+ p[0]=(unsigned char)((value>>24)&0xFF);
+ p[1]=(unsigned char)((value>>16)&0xFF);
+ p[2]=(unsigned char)((value>>8)&0xFF);
+ p[3]=(unsigned char)(value&0xFF);
+}
+
+static bool RunP06aTPLParserTest(void) {
+ // Minimal single-texture TPL blob following the same header/descriptor/image
+ // layout used by libogc. P0.6a validates metadata parsing only; pixel decode
+ // becomes P0.6b/P0.6c.
+ unsigned char tpl[64];
+ ZeroMemory(tpl,sizeof(tpl));
+
+ WriteBE32(tpl+0,0x0020AF30); // TPL magic/version
+ WriteBE32(tpl+4,1);          // one texture
+ WriteBE32(tpl+8,12);         // descriptor table starts at 0x0C
+ WriteBE32(tpl+12,20);        // image header offset
+ WriteBE32(tpl+16,0);         // no palette
+
+ WriteBE16(tpl+20,16);        // height
+ WriteBE16(tpl+22,16);        // width
+ WriteBE32(tpl+24,GX_TF_RGBA8);
+ WriteBE32(tpl+28,56);        // dummy image data offset inside blob
+ WriteBE32(tpl+32,GX_CLAMP);
+ WriteBE32(tpl+36,GX_CLAMP);
+ WriteBE32(tpl+40,GX_NEAR);
+ WriteBE32(tpl+44,GX_NEAR);
+ WriteBE32(tpl+48,0);         // lodBias = 0.0f
+ tpl[52]=0;                   // edgeLOD
+ tpl[53]=0;                   // minLOD
+ tpl[54]=0;                   // maxLOD
+ tpl[55]=0;                   // unpacked
+ tpl[56]=0xAA;                // dummy texture byte so offset is valid
+
+ WiiTPLArchive archive;
+ ZeroMemory(&archive,sizeof(archive));
+ WiiTPLImageInfo info;
+ ZeroMemory(&info,sizeof(info));
+
+ if(!WiiTPL_OpenMemory(&archive,tpl,sizeof(tpl)))
+  return false;
+ if(archive.textureCount!=1)
+  return false;
+ if(!WiiTPL_GetImageInfo(&archive,0,&info))
+  return false;
+
+ return info.width==16 &&
+        info.height==16 &&
+        info.format==GX_TF_RGBA8 &&
+        info.dataOffset==56 &&
+        info.wrapS==GX_CLAMP &&
+        info.wrapT==GX_CLAMP;
+}
+
 VOID __cdecl main() {
  OutputDebugStringA("============================================\n");
- OutputDebugStringA(" 240p Test Suite - Wii2Xenon P0.5\n");
- OutputDebugStringA(" First real 240p Test Suite asset\n");
+ OutputDebugStringA(" 240p Test Suite - Wii2Xenon P0.6a\n");
+ OutputDebugStringA(" TPL parser metadata bootstrap\n");
  OutputDebugStringA("============================================\n");
 
  if(!GX360_Init()) {
@@ -73,45 +131,32 @@ VOID __cdecl main() {
 
  ControllerInit();
 
+ const bool tplParserOk=RunP06aTPLParserTest();
+ if(tplParserOk)
+  OutputDebugStringA("[Wii2Xenon/TPL] P0.6a PASS: TPL header/descriptor/image metadata parsed correctly.\n");
+ else
+  OutputDebugStringA("[Wii2Xenon/TPL] P0.6a FAIL: TPL metadata parser rejected the bootstrap blob.\n");
+
  const char* assetPath="game:\\assets\\Convergence-01-grid.png";
  if(!LoadPNG16(assetPath)) {
-  OutputDebugStringA("[240p/Wii2Xenon] P0.5 asset missing: game:\\assets\\Convergence-01-grid.png\n");
-  OutputDebugStringA("[240p/Wii2Xenon] Using magenta fallback checker.\n");
+  OutputDebugStringA("[240p/Wii2Xenon] P0.5 regression asset missing.\n");
   BuildFallbackTexture();
  } else {
-  OutputDebugStringA("[240p/Wii2Xenon] Loaded real 240p asset: Convergence-01-grid.png\n");
+  OutputDebugStringA("[240p/Wii2Xenon] P0.5 regression asset loaded.\n");
  }
 
  struct image_st image;
  ZeroMemory(&image,sizeof(image));
-
- GX_InitTexObj(&image.tex,g_P0Pixels,
-  P0_TEXTURE_WIDTH,P0_TEXTURE_HEIGHT,
-  GX_TF_RGBA8,GX_CLAMP,GX_CLAMP,GX_FALSE);
-
- // NEAR is intentional: this is a tiny pixel-art calibration asset and P0.5
- // should preserve its exact hard-edged source pixels while magnified.
+ GX_InitTexObj(&image.tex,g_P0Pixels,P0_TEXTURE_WIDTH,P0_TEXTURE_HEIGHT,GX_TF_RGBA8,GX_CLAMP,GX_CLAMP,GX_FALSE);
  GX_InitTexObjLOD(&image.tex,GX_NEAR,GX_NEAR,0,0,0,0,0,0);
 
- image.x=96;
- image.y=56;
- image.w=128;
- image.h=128;
- image.tw=(float)P0_TEXTURE_WIDTH;
- image.th=(float)P0_TEXTURE_HEIGHT;
- image.u1=0;
- image.v1=0;
- image.u2=1;
- image.v2=1;
- image.r=255;
- image.g=255;
- image.b=255;
- image.alpha=255;
- image.scale=0;
- image.IgnoreOffsetY=1;
+ image.x=96; image.y=56; image.w=128; image.h=128;
+ image.tw=(float)P0_TEXTURE_WIDTH; image.th=(float)P0_TEXTURE_HEIGHT;
+ image.u1=0; image.v1=0; image.u2=1; image.v2=1;
+ image.r=255; image.g=255; image.b=255; image.alpha=255;
+ image.scale=0; image.IgnoreOffsetY=1;
 
- OutputDebugStringA("[240p/Wii2Xenon] P0.5 ready: real 240p PNG -> GXTexObj -> DrawImage -> GX360.\n");
- OutputDebugStringA("[240p/Wii2Xenon] A/B/X/Y still tint the asset as an input/render regression test.\n");
+ OutputDebugStringA("[Wii2Xenon/TPL] Green background = parser PASS; dark red = parser FAIL.\n");
 
  for(;;) {
   ControllerScan();
@@ -122,7 +167,7 @@ VOID __cdecl main() {
   else if(pressed&PAD_BUTTON_X) { image.r=90; image.g=150; image.b=255; }
   else if(pressed&PAD_BUTTON_Y) { image.r=255; image.g=220; image.b=90; }
 
-  GX360_Clear(D3DCOLOR_XRGB(18,22,32));
+  GX360_Clear(tplParserOk ? D3DCOLOR_XRGB(8,42,20) : D3DCOLOR_XRGB(72,8,18));
   StartScene();
   DrawImage(&image);
   EndScene();
