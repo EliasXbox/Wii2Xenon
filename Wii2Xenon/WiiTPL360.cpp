@@ -32,7 +32,6 @@ bool WiiTPL_OpenMemory(WiiTPLArchive* archive, const void* memory, unsigned int 
 
     const unsigned char* data = (const unsigned char*)memory;
 
-    // Standard TPL magic/version used by Nintendo/libogc tools.
     if (ReadBE32(data + 0) != 0x0020AF30)
         return false;
 
@@ -45,7 +44,6 @@ bool WiiTPL_OpenMemory(WiiTPLArchive* archive, const void* memory, unsigned int 
     if (descriptorOffset >= length)
         return false;
 
-    // Each descriptor contains image-header offset + palette-header offset.
     if (textureCount > (length - descriptorOffset) / 8)
         return false;
 
@@ -70,7 +68,6 @@ bool WiiTPL_GetImageInfo(const WiiTPLArchive* archive, unsigned int index, WiiTP
 
     const unsigned int imageHeaderOffset = ReadBE32(archive->data + desc);
 
-    // Wii TPL image headers are 36 bytes.
     if (imageHeaderOffset > archive->size || archive->size - imageHeaderOffset < 36)
         return false;
 
@@ -93,9 +90,75 @@ bool WiiTPL_GetImageInfo(const WiiTPLArchive* archive, unsigned int index, WiiTP
     if (info->width == 0 || info->height == 0)
         return false;
 
-    // P0.6a does not decode texture pixels yet, but reject impossible offsets.
     if (info->dataOffset >= archive->size)
         return false;
+
+    return true;
+}
+
+bool WiiTPL_DecodeRGBA8(const WiiTPLArchive* archive,
+                         unsigned int index,
+                         DWORD* outPixels,
+                         unsigned int outPixelCount)
+{
+    if (!archive || !outPixels)
+        return false;
+
+    WiiTPLImageInfo info;
+    ZeroMemory(&info, sizeof(info));
+
+    if (!WiiTPL_GetImageInfo(archive, index, &info))
+        return false;
+
+    // GX_TF_RGBA8 = 6. Keep the decoder intentionally strict for P0.6b.
+    if (info.format != 6)
+        return false;
+
+    const unsigned int pixelCount = (unsigned int)info.width * (unsigned int)info.height;
+    if (outPixelCount < pixelCount)
+        return false;
+
+    // Wii RGBA8 uses 4x4 tiled blocks, 64 bytes each:
+    // first 32 bytes = A,R pairs for 16 pixels
+    // next  32 bytes = G,B pairs for the same 16 pixels.
+    const unsigned int blocksX = ((unsigned int)info.width + 3) / 4;
+    const unsigned int blocksY = ((unsigned int)info.height + 3) / 4;
+    const unsigned int requiredBytes = blocksX * blocksY * 64;
+
+    if (info.dataOffset > archive->size || requiredBytes > archive->size - info.dataOffset)
+        return false;
+
+    const unsigned char* src = archive->data + info.dataOffset;
+
+    for (unsigned int by = 0; by < blocksY; ++by)
+    {
+        for (unsigned int bx = 0; bx < blocksX; ++bx)
+        {
+            const unsigned char* block = src + (by * blocksX + bx) * 64;
+            const unsigned char* ar = block;
+            const unsigned char* gb = block + 32;
+
+            for (unsigned int py = 0; py < 4; ++py)
+            {
+                for (unsigned int px = 0; px < 4; ++px)
+                {
+                    const unsigned int x = bx * 4 + px;
+                    const unsigned int y = by * 4 + py;
+                    const unsigned int local = py * 4 + px;
+
+                    if (x >= info.width || y >= info.height)
+                        continue;
+
+                    const unsigned char a = ar[local * 2 + 0];
+                    const unsigned char r = ar[local * 2 + 1];
+                    const unsigned char g = gb[local * 2 + 0];
+                    const unsigned char b = gb[local * 2 + 1];
+
+                    outPixels[y * info.width + x] = D3DCOLOR_ARGB(a, r, g, b);
+                }
+            }
+        }
+    }
 
     return true;
 }
