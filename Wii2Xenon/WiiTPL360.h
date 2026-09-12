@@ -2,9 +2,9 @@
 
 #include <xtl.h>
 
-// Minimal, read-only Wii TPL parser for the P0.6a bootstrap.
-// It intentionally parses offsets instead of rewriting the source buffer,
-// so later ports can feed immutable/decompressed TPL blobs safely.
+// Read-only Wii TPL parser/decoder used by the 240p bootstrap.
+// P0.6a parsed archive metadata. P0.6b adds the first real pixel decoder:
+// GX_TF_RGBA8 tiled Wii texture data -> linear Xbox A8R8G8B8 pixels.
 
 struct WiiTPLArchive
 {
@@ -33,3 +33,10 @@ struct WiiTPLImageInfo
 
 bool WiiTPL_OpenMemory(WiiTPLArchive* archive, const void* memory, unsigned int length);
 bool WiiTPL_GetImageInfo(const WiiTPLArchive* archive, unsigned int index, WiiTPLImageInfo* info);
+
+// Decode one GX_TF_RGBA8 texture into linear DWORD A8R8G8B8 pixels.
+// Returns false for unsupported formats, malformed offsets, or too-small output.
+bool WiiTPL_DecodeRGBA8(const WiiTPLArchive* archive,
+                         unsigned int index,
+                         DWORD* outPixels,
+                         unsigned int outPixelCount);
